@@ -9,5 +9,5 @@ import java.util.Optional;
 @Repository
 public interface DepartmentRepository extends JpaRepository<Department, Long> {
     boolean existsById(Long departmentId);
-
+    boolean existsByDepartmentName(String departmentName);
 }
