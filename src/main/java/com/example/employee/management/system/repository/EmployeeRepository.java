@@ -2,29 +2,42 @@ package com.example.employee.management.system.repository;
 
 import com.example.employee.management.system.dto.response.EmployeeDtoResponse;
 import com.example.employee.management.system.model.Employee;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 @Repository
 public interface EmployeeRepository extends JpaRepository<Employee, Long> {
-    List<Employee> findByDepartment_DepartmentId(Long departmentId);
 
+    //Calculate average salary
     @Query("SELECT AVG(employee.salary) FROM Employee employee")
     BigDecimal findAverageSalary();
 
-    @Query("SELECT AVG(YEAR(CURRENT_DATE) - YEAR(employee.dateOfBirth)) FROM Employee employee")
+    //Calculate average age
+    @Query("SELECT AVG(TIMESTAMPDIFF(YEAR, employee.dateOfBirth, CURRENT_DATE)) FROM Employee employee")
     Double findAverageAge();
 
-    @Query("SELECT e FROM Employee e WHERE TIMESTAMPDIFF(YEAR, e.dateOfBirth, CURRENT_DATE) BETWEEN :minAge AND :maxAge")
-    List<Employee> findByAgeBetween(@Param("minAge") int minAge, @Param("maxAge") int maxAge);
+    //Find by department ID
+    Page<Employee> findByDepartment_DepartmentId(Long departmentId, Pageable pageable);
 
-    @Query("SELECT e FROM Employee e WHERE e.department.departmentId = :departmentId AND TIMESTAMPDIFF(YEAR, e.dateOfBirth, CURRENT_DATE) BETWEEN :minAge AND :maxAge")
-    List<Employee> findByDepartmentAndAgeBetween(@Param("departmentId") Long departmentId,
+    //Filter by age range
+    @Query("SELECT e FROM Employee e WHERE TIMESTAMPDIFF(YEAR, e.dateOfBirth, CURRENT_DATE)" +
+            " BETWEEN :minAge AND :maxAge")
+    Page<Employee> findByAgeBetween(@Param("minAge") int minAge, @Param("maxAge") int maxAge, Pageable pageable);
+
+    //Filter by department and age range
+    @Query("SELECT e FROM Employee e WHERE e.department.departmentId = :departmentId " +
+            "AND TIMESTAMPDIFF(YEAR, e.dateOfBirth, CURRENT_DATE) BETWEEN :minAge AND :maxAge")
+    Page<Employee> findByDepartmentAndAgeBetween(@Param("departmentId") Long departmentId,
                                                  @Param("minAge") int minAge,
-                                                 @Param("maxAge") int maxAge);
+                                                 @Param("maxAge") int maxAge,
+                                                 Pageable pageable);
+
+    //Search for employees based on name
+    Page<Employee> findByNameContainingIgnoreCase(String name, Pageable pageable);
 }

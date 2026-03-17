@@ -6,6 +6,8 @@ import com.example.employee.management.system.model.Department;
 import com.example.employee.management.system.service.IDepartmentService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,8 +23,8 @@ public class DepartmentApiController {
     private IDepartmentService departmentService;
 
     @GetMapping
-    public ResponseEntity<List<DepartmentDtoResponse>>  getAllDepartments() {
-        return ResponseEntity.ok(departmentService.getAllDepartments());
+    public ResponseEntity<Page<DepartmentDtoResponse>>  getAllDepartments(Pageable pageable) {
+        return ResponseEntity.ok(departmentService.getAllDepartments(pageable));
     }
 
     @GetMapping("/{departmentId}")

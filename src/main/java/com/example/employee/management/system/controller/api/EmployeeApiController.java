@@ -6,11 +6,11 @@ import com.example.employee.management.system.exceptions.BadRequestException;
 import com.example.employee.management.system.service.IEmployeeService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/employees")
@@ -20,8 +20,8 @@ public class EmployeeApiController {
     private IEmployeeService employeeService;
 
     @GetMapping
-    public ResponseEntity<List<EmployeeDtoResponse>> getAllEmployees(){
-        return ResponseEntity.ok(employeeService.getAllEmployees());
+    public ResponseEntity<Page<EmployeeDtoResponse>> getAllEmployees(Pageable pageable) {
+        return ResponseEntity.ok(employeeService.getAllEmployees(pageable));
     }
 
     @GetMapping("/{employeeId}")
@@ -29,23 +29,33 @@ public class EmployeeApiController {
         return ResponseEntity.ok(employeeService.getEmployeeById(employeeId));
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<Page<EmployeeDtoResponse>> searchEmployees(
+            @RequestParam String employeeName,
+            Pageable pageable) {
+        return ResponseEntity.ok(employeeService.searchEmployeeName(employeeName, pageable));
+    }
+
     @GetMapping("/filter")
-    public ResponseEntity<List<EmployeeDtoResponse>> filterByDepartmentAndAge (@RequestParam(required = false) Long departmentId,
-                                                                               @RequestParam(required = false) Integer minAge,
-                                                                               @RequestParam(required = false) Integer maxAge) throws Exception{
+    public ResponseEntity<Page<EmployeeDtoResponse>> filterByDepartmentAndAge (
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) Integer minAge,
+            @RequestParam(required = false) Integer maxAge,
+            Pageable pageable){
         if ((minAge != null && maxAge == null) || (minAge == null && maxAge != null)) {
             throw new BadRequestException("Both minAge and maxAge must be provided together");
         }
         if (departmentId != null && minAge != null && maxAge != null) {
-            return ResponseEntity.ok(employeeService.filterByDepartmentAndAge(departmentId, minAge, maxAge));
+            return ResponseEntity.ok(employeeService.filterByDepartmentAndAge(departmentId, minAge, maxAge
+                                                                                ,pageable));
         }
         if (departmentId != null) {
-            return ResponseEntity.ok(employeeService.filterByDepartmentId(departmentId));
+            return ResponseEntity.ok(employeeService.filterByDepartmentId(departmentId, pageable));
         }
         if (minAge != null && maxAge != null) {
-            return ResponseEntity.ok(employeeService.filterByAgeRange(minAge, maxAge));
+            return ResponseEntity.ok(employeeService.filterByAgeRange(minAge, maxAge, pageable));
         }
-        return ResponseEntity.ok(employeeService.getAllEmployees());
+        return ResponseEntity.ok(employeeService.getAllEmployees(pageable));
     }
 
     @PostMapping
