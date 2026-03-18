@@ -108,10 +108,20 @@ async function deleteDepartment(departmentId) {
         credentials: 'include'
     });
 
-    if (res.ok) {
-        loadDepartments(currentPage); // Reload current page after delete
-    } else {
-        alert('Failed to delete department.');
+    if (!res.ok) {
+        const err = await res.json(); // read the error response
+        showAlert(err.message || 'Failed to delete department.', 'danger'); // use API message
+        return;
     }
+
+    await loadDepartments(currentPage);
+    showAlert('Department deleted successfully.', 'success');
 }
 
+function showAlert(message, type = 'success') {
+    const box = document.getElementById('alertBox');
+    box.className = `alert alert-${type} alert-dismissible fade show`;
+    document.getElementById('alertMessage').textContent = message;
+    box.classList.remove('d-none');
+    setTimeout(() => box.classList.add('d-none'), 4000);
+}

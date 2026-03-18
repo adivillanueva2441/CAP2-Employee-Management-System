@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Past;
 import java.time.LocalDate;
 
 @MappedSuperclass
-public class Person {
+public abstract class Person {
 
     @NotBlank(message = "Name cannot be blank")
     @Column(nullable = false)

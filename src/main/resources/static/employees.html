@@ -132,18 +132,32 @@
             </div>
         </div>
 
+        <!-- Alert -->
+        <div id="alertBox" class="alert d-none alert-dismissible fade show" role="alert">
+            <span id="alertMessage"></span>
+            <button type="button" class="btn-close" onclick="document.getElementById('alertBox').classList.add('d-none')"></button>
+        </div>
+
         <!-- Employee Table -->
         <div class="card border-0 shadow-sm">
             <div class="card-body p-0">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-3">Emp No.</th>
-                            <th>Name</th>
+                            <th class="ps-3" data-sort="employeeNumber" onclick="sortBy('employeeNumber')" style="cursor:pointer;">
+                                Emp No. <i class="bi bi-arrow-down-up text-muted small"></i>
+                            </th>
+                            <th data-sort="name" onclick="sortBy('name')" style="cursor:pointer;">
+                                Name <i class="bi bi-arrow-down-up text-muted small"></i>
+                            </th>
                             <th>Department</th>
-                            <th>Date of Birth</th>
+                            <th data-sort="dateOfBirth" onclick="sortBy('dateOfBirth')" style="cursor:pointer;">
+                                Date of Birth <i class="bi bi-arrow-down-up text-muted small"></i>
+                            </th>
                             <th>Age</th>
-                            <th>Salary</th>
+                            <th data-sort="salary" onclick="sortBy('salary')" style="cursor:pointer;">
+                                Salary <i class="bi bi-arrow-down-up text-muted small"></i>
+                            </th>
                             <th>Actions</th>
                         </tr>
                     </thead>

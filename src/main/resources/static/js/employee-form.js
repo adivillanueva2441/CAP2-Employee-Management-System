@@ -104,6 +104,8 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
     }
 
     // success — redirect back to employee list
+        // store message before redirecting
+    sessionStorage.setItem('successMessage', isEditing ? 'Employee updated successfully.' : 'Employee added successfully.');
     window.location.href = '/employees.html';
 });
 

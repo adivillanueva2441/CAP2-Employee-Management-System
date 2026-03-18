@@ -10,6 +10,14 @@ document.addEventListener('DOMContentLoaded', () => {
     loadEmployees();
     loadDepartments();
     loadStats();
+    updateSortIcons();
+
+    // check for success message from form redirect
+    const message = sessionStorage.getItem('successMessage');
+    if (message) {
+        showAlert(message, 'success');
+        sessionStorage.removeItem('successMessage'); // clear after showing
+    }
 });
 
 async function loadDepartments(){
@@ -24,19 +32,26 @@ async function loadDepartments(){
     });
 }
 
+//Default sorting direction 
+let currentSort = { field: 'employeeId', direction: 'asc' }; 
+
 // fetches employees from the API and renders them
 async function loadEmployees(page = 0, filter = {}) {
     currentPage = page;
     currentFilter = filter;
 
-    let url = `${EMPLOYEE_API}?page=${page}&size=${PAGE_SIZE}`;
+    let url = `${EMPLOYEE_API}?page=${page}&size=${PAGE_SIZE}&sort=${currentSort.field},${currentSort.direction}`;
 
     if(filter.departmentId && filter.minAge && filter.maxAge){
-        url = `${EMPLOYEE_API}/filter?departmentId=${filter.departmentId}&minAge=${filter.minAge}&maxAge=${filter.maxAge}&page=${page}&size=${PAGE_SIZE}`
+        url = `${EMPLOYEE_API}/filter?departmentId=${filter.departmentId}&minAge=${filter.minAge}&maxAge=${filter.maxAge}&page=${page}&size=${PAGE_SIZE}
+        &sort=${currentSort.field},${currentSort.direction}`
+
     }else if(filter.departmentId){
-        url = `${EMPLOYEE_API}/filter?departmentId=${filter.departmentId}&page=${page}&size=${PAGE_SIZE}`
+        url = `${EMPLOYEE_API}/filter?departmentId=${filter.departmentId}&page=${page}&size=${PAGE_SIZE}
+        &sort=${currentSort.field},${currentSort.direction}`
     }else if(filter.minAge && filter.maxAge){
-        url = `${EMPLOYEE_API}/filter?&minAge=${filter.minAge}&maxAge=${filter.maxAge}&page=${page}&size=${PAGE_SIZE}`
+        url = `${EMPLOYEE_API}/filter?&minAge=${filter.minAge}&maxAge=${filter.maxAge}&page=${page}&size=${PAGE_SIZE}
+        &sort=${currentSort.field},${currentSort.direction}`
     }
 
     const res = await fetch(
@@ -48,6 +63,8 @@ async function loadEmployees(page = 0, filter = {}) {
     renderPagination(data);
 }
 
+
+
 async function searchEmployees(employeeName, page = 0) {
     const res = await fetch(
         `${EMPLOYEE_API}/search?employeeName=${encodeURIComponent(employeeName)}&page=${page}&size=${PAGE_SIZE}`,
@@ -57,6 +74,38 @@ async function searchEmployees(employeeName, page = 0) {
  
     renderTable(data);
     renderPagination(data);
+}
+
+// toggles sort direction and reloads
+function sortBy(field) {
+    if (currentSort.field === field) {
+        // same field — toggle direction
+        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        // new field — default to ascending
+        currentSort.field = field;
+        currentSort.direction = 'asc';
+    }
+    updateSortIcons();
+    loadEmployees(0, currentFilter);
+}
+
+
+// updates the sort icons on table headers
+function updateSortIcons() {
+    // reset all headers to default icon
+    document.querySelectorAll('thead th[data-sort]').forEach(th => {
+        th.querySelector('i').className = 'bi bi-arrow-down-up text-muted small';
+    });
+
+    // update the active sorted column
+    const activeTh = document.querySelector(`thead th[data-sort="${currentSort.field}"]`);
+    if (activeTh) {
+        activeTh.querySelector('i').className =
+            currentSort.direction === 'asc'
+                ? 'bi bi-arrow-up small text-primary'
+                : 'bi bi-arrow-down small text-primary';
+    }
 }
 
 // builds the table rows from the API response
@@ -81,6 +130,9 @@ function renderTable(data) {
             <td>${employee.age}</td>
             <td>₱${parseFloat(employee.salary).toLocaleString()}</td>
             <td>
+                <a href="/employee-details.html?id=${employee.employeeId}" class="btn btn-outline-success btn-sm me-1">
+                    <i class="bi bi-eye"></i>
+                </a>
                 <a href="/employee-form.html?id=${employee.employeeId}" class="btn btn-outline-primary btn-sm me-1">
                     <i class="bi bi-pencil"></i>
                 </a>
@@ -222,7 +274,7 @@ async function loadStats() {
 
 // Deletes an employee by id
 async function deleteEmployee(id) {
-    if (!confirm('Are you sure you want to delete this employee?')) return;
+    if (!confirm('Are you sure you want to permanently delete this employee? This action cannot be undone.')) return;
 
     const res = await fetch(`${EMPLOYEE_API}/${id}`, {
         method: 'DELETE',
@@ -231,7 +283,17 @@ async function deleteEmployee(id) {
 
     if (res.ok) {
         loadEmployees(currentPage); // Reload current page after delete
+        showAlert('Employee deleted successfully.', 'success'); 
+        loadStats();
     } else {
         alert('Failed to delete employee.');
     }
+}
+
+function showAlert(message, type = 'success') {
+    const box = document.getElementById('alertBox');
+    box.className = `alert alert-${type} alert-dismissible fade show`;
+    document.getElementById('alertMessage').textContent = message;
+    box.classList.remove('d-none');
+    setTimeout(() => box.classList.add('d-none'), 4000);
 }

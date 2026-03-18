@@ -64,9 +64,11 @@ public class ReportServiceImpl implements IReportService {
         writer.println("Export Time," + LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")));
         writer.println("Total Employees," + employeeRepository.count());
         writer.println("Total Departments," + departmentRepository.count());
-        writer.println("Average Salary," + "\"" + currencyFormat
-                .format(employeeRepository.findAverageSalary()) + "\"");
-        writer.println("Average Age," + employeeRepository.findAverageAge());
+        BigDecimal avgSalary = employeeRepository.findAverageSalary();
+        writer.println("Average Salary," + (avgSalary != null ? "\"" + currencyFormat.format(avgSalary) + "\"" : "N/A"));
+
+        Double avgAge = employeeRepository.findAverageAge();
+        writer.println("Average Age," + (avgAge != null ? avgAge : "N/A"));
         writer.println();
 
         // write each employee
