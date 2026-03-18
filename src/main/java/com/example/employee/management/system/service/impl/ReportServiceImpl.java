@@ -50,6 +50,11 @@ public class ReportServiceImpl implements IReportService {
     public byte[] exportToCSV() {
         List<Employee> employees = employeeRepository.findAll();
 
+        // Formats numbers for salary to have comma on appropriate digits
+        NumberFormat currencyFormat = NumberFormat.getNumberInstance(Locale.US);
+        currencyFormat.setMinimumFractionDigits(2);
+        currencyFormat.setMaximumFractionDigits(2);
+
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         PrintWriter writer = new PrintWriter(out);
 
@@ -59,18 +64,14 @@ public class ReportServiceImpl implements IReportService {
         writer.println("Export Time," + LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")));
         writer.println("Total Employees," + employeeRepository.count());
         writer.println("Total Departments," + departmentRepository.count());
-        writer.println("Average Salary," + employeeRepository.findAverageSalary());
+        writer.println("Average Salary," + "\"" + currencyFormat
+                .format(employeeRepository.findAverageSalary()) + "\"");
         writer.println("Average Age," + employeeRepository.findAverageAge());
         writer.println();
 
         // write each employee
         writer.println("EMPLOYEE LIST");
         writer.println("Emp No.,Name,Department,Date of Birth,Age,Salary");
-
-        // Formats numbers for salary to have comma on appropriate digits
-        NumberFormat currencyFormat = NumberFormat.getNumberInstance(Locale.US);
-        currencyFormat.setMinimumFractionDigits(2);
-        currencyFormat.setMaximumFractionDigits(2);
 
         employees.forEach(employee -> {
             int age = Period.between(employee.getDateOfBirth(), LocalDate.now()).getYears();
