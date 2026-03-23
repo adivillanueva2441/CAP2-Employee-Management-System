@@ -5,6 +5,7 @@ import com.example.employee.management.system.dto.request.DepartmentDtoRequest;
 import com.example.employee.management.system.dto.response.DepartmentDtoResponse;
 import com.example.employee.management.system.model.Department;
 import com.example.employee.management.system.service.IDepartmentService;
+import com.example.employee.management.system.service.IMessageHandlerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +29,9 @@ public class DepartmentApiControllerTest {
 
     @Mock
     private IDepartmentService departmentService;
+
+    @Mock
+    private IMessageHandlerService messageHandlerService;
 
     @InjectMocks
     private DepartmentApiController departmentApiController;
@@ -101,22 +105,26 @@ public class DepartmentApiControllerTest {
     }
 
     @Test
-    void updateDepartment_returns204() {
-        doNothing().when(departmentService).updateDepartmentDetails(1L, departmentDtoRequest);
+    void updateDepartment_returns200() {
+        when(departmentService.updateDepartmentDetails(1L, departmentDtoRequest))
+                .thenReturn("Department has been successfully updated.");
 
-        ResponseEntity<Void> response = departmentApiController.updateDepartment(1L, departmentDtoRequest);
+        ResponseEntity<String> response = departmentApiController.updateDepartment(1L, departmentDtoRequest);
 
-        assertThat(response.getStatusCode().value()).isEqualTo(204);
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).isEqualTo("Department has been successfully updated.");
         verify(departmentService, times(1)).updateDepartmentDetails(1L, departmentDtoRequest);
     }
 
     @Test
-    void deleteDepartment_returns204() {
-        doNothing().when(departmentService).deleteDepartment(1L);
+    void deleteDepartment_returns200() {
+        when(departmentService.deleteDepartment(1L))
+                .thenReturn("Department has been successfully deleted.");
 
-        ResponseEntity<Void> response = departmentApiController.deleteDepartment(1L);
+        ResponseEntity<String> response = departmentApiController.deleteDepartment(1L);
 
-        assertThat(response.getStatusCode().value()).isEqualTo(204);
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).isEqualTo("Department has been successfully deleted.");
         verify(departmentService, times(1)).deleteDepartment(1L);
     }
 }

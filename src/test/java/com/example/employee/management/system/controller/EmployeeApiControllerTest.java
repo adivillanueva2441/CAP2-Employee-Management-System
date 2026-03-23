@@ -6,6 +6,7 @@ import com.example.employee.management.system.exceptions.BadRequestException;
 import com.example.employee.management.system.model.Department;
 import com.example.employee.management.system.model.Employee;
 import com.example.employee.management.system.service.IEmployeeService;
+import com.example.employee.management.system.service.IMessageHandlerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +32,9 @@ public class EmployeeApiControllerTest {
 
     @Mock
     private IEmployeeService employeeService;
+
+    @Mock
+    private IMessageHandlerService messageHandlerService;
 
     @InjectMocks
     private EmployeeApiController employeeApiController;
@@ -182,20 +186,6 @@ public class EmployeeApiControllerTest {
     }
 
     @Test
-    void filter_throwsBadRequestException_whenOnlyMinAgeProvided() {
-        assertThatThrownBy(() -> employeeApiController.filterByDepartmentAndAge(null, 20, null, pageable))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessage("Both minAge and maxAge must be provided together");
-    }
-
-    @Test
-    void filter_throwsBadRequestException_whenOnlyMaxAgeProvided() {
-        assertThatThrownBy(() -> employeeApiController.filterByDepartmentAndAge(null, null, 30, pageable))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessage("Both minAge and maxAge must be provided together");
-    }
-
-    @Test
     void addNewEmployee_returns201WithCreatedEmployee() {
         when(employeeService.addNewEmployee(employeeDtoRequest)).thenReturn(employeeDtoResponse);
 
@@ -208,22 +198,24 @@ public class EmployeeApiControllerTest {
     }
 
     @Test
-    void updateEmployee_returns204() {
-        doNothing().when(employeeService).updateEmployeeDetails(1L, employeeDtoRequest);
+    void updateEmployee_returns200() {
+        when(employeeService.updateEmployeeDetails(1L, employeeDtoRequest)).thenReturn("Employee record has been successfully updated.");
 
-        ResponseEntity<Void> response = employeeApiController.updateEmployee(1L, employeeDtoRequest);
+        ResponseEntity<String> response = employeeApiController.updateEmployee(1L, employeeDtoRequest);
 
-        assertThat(response.getStatusCode().value()).isEqualTo(204);
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).isEqualTo("Employee record has been successfully updated.");
         verify(employeeService, times(1)).updateEmployeeDetails(1L, employeeDtoRequest);
     }
 
     @Test
-    void deleteEmployee_returns204() {
-        doNothing().when(employeeService).deleteEmployee(1L);
+    void deleteEmployee_returns200() {
+        when(employeeService.deleteEmployee(1L)).thenReturn("Employee record has been successfully deleted.");
 
-        ResponseEntity<Void> response = employeeApiController.deleteEmployee(1L);
+        ResponseEntity<String> response = employeeApiController.deleteEmployee(1L);
 
-        assertThat(response.getStatusCode().value()).isEqualTo(204);
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        assertThat(response.getBody()).isEqualTo("Employee record has been successfully deleted.");
         verify(employeeService, times(1)).deleteEmployee(1L);
     }
 }

@@ -20,6 +20,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -38,6 +39,8 @@ public class EmployeeServiceTest {
     private EmployeeRepository employeeRepository;
     @Mock
     private DepartmentRepository departmentRepository;
+    @Mock
+    private IMessageHandlerService messageHandlerService;
 
     @InjectMocks
     private EmployeeServiceImpl employeeService;
@@ -48,7 +51,7 @@ public class EmployeeServiceTest {
 
     @BeforeEach
     public void setUp() {
-
+        ReflectionTestUtils.setField(employeeService, "minimumWage", BigDecimal.valueOf(19000.00));
         department = new Department();
         department.setDepartmentId(1L);
         department.setDepartmentName("Department");
@@ -58,7 +61,7 @@ public class EmployeeServiceTest {
         employee.setEmployeeId(1L);
         employee.setEmployeeNumber("EMP-0001");
         employee.setName("Employee 1");
-        employee.setDateOfBirth(LocalDate.now());
+        employee.setDateOfBirth(LocalDate.of(2000, 1, 1));
         employee.setSalary(BigDecimal.valueOf(67000.00));
         employee.setDepartment(department);
 
@@ -116,10 +119,11 @@ public class EmployeeServiceTest {
     @Test
     void getEmployeeById_throwsResourceNotFoundException_whenEmployeeNotFound() {
         when(employeeRepository.findById(1L)).thenReturn(Optional.empty());
+        when(messageHandlerService.get(eq("employee.not.found"), any())).thenReturn("Employee with id: 1 not found");
 
         assertThatThrownBy(() -> employeeService.getEmployeeById(1L))
                 .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("Employee not found with id: 1");
+                .hasMessage("Employee with id: 1 not found");
 
         verify(employeeRepository, times(1)).findById(1L);
     }
@@ -144,9 +148,10 @@ public class EmployeeServiceTest {
 
     @Test
     void searchEmployeeName_throwsResourceNotFoundException_whenEmployeeNotFound() {
+        when(messageHandlerService.get(eq("employee.search.empty"), any())).thenReturn("Search name cannot be empty.");
         assertThatThrownBy(() -> employeeService.searchEmployeeName("", pageable))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("Search name cannot be empty");
+                .hasMessage("Search name cannot be empty.");
 
         verify(employeeRepository, never()).findByNameContainingIgnoreCase(anyString(), any(Pageable.class));
     }
@@ -171,18 +176,22 @@ public class EmployeeServiceTest {
 
     @Test
     void filterByAgeRange_throwsBadRequestException_whenMinAgeBelowMinimum() {
+        when(messageHandlerService.get("employee.age.invalid")).thenReturn("Employee age must be between 18 and 80 years old.");
+
         assertThatThrownBy(() -> employeeService.filterByAgeRange(17, 40, pageable))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("Age must be between 18 and 80");
+                .hasMessage("Employee age must be between 18 and 80 years old.");
 
         verify(employeeRepository, never()).findByAgeBetween(anyInt(), anyInt(), any(Pageable.class));
     }
 
     @Test
     void filterByAgeRange_throwsBadRequestException_whenMaxAgeBelowMinimum() {
+        when(messageHandlerService.get("employee.age.invalid")).thenReturn("Employee age must be between 18 and 80 years old.");
+
         assertThatThrownBy(() -> employeeService.filterByAgeRange(18, 17, pageable))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("Age must be between 18 and 80");
+                .hasMessage("Employee age must be between 18 and 80 years old.");
 
         verify(employeeRepository, never()).findByAgeBetween(anyInt(), anyInt(), any(Pageable.class));
 
@@ -190,27 +199,32 @@ public class EmployeeServiceTest {
 
     @Test
     void filterByAgeRange_throwsBadRequestException_whenMinAgeAboveMaximum() {
+        when(messageHandlerService.get("employee.age.invalid")).thenReturn("Employee age must be between 18 and 80 years old.");
+
         assertThatThrownBy(() -> employeeService.filterByAgeRange(81, 40, pageable))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("Age must be between 18 and 80");
+                .hasMessage("Employee age must be between 18 and 80 years old.");
 
         verify(employeeRepository, never()).findByAgeBetween(anyInt(), anyInt(), any(Pageable.class));
     }
 
     @Test
     void filterByAgeRange_throwsBadRequestException_whenMaxAgeAboveMaximum() {
+        when(messageHandlerService.get("employee.age.invalid")).thenReturn("Employee age must be between 18 and 80 years old.");
         assertThatThrownBy(() -> employeeService.filterByAgeRange(20, 81, pageable))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("Age must be between 18 and 80");
+                .hasMessage("Employee age must be between 18 and 80 years old.");
 
         verify(employeeRepository, never()).findByAgeBetween(anyInt(), anyInt(), any(Pageable.class));
     }
 
     @Test
     void filterByAgeRange_throwsBadRequestException_whenMinAgeGreaterThanMaxAge() {
+        when(messageHandlerService.get("employee.age.minimum.higher.than.maximum")).thenReturn("Minimum Age cannot be higher than Max Age");
+
         assertThatThrownBy(() -> employeeService.filterByAgeRange(40, 20, pageable))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("Minimum age cannot be greater than maximum age");
+                .hasMessage("Minimum Age cannot be higher than Max Age");
 
         verify(employeeRepository, never()).findByAgeBetween(anyInt(), anyInt(), any(Pageable.class));
     }
@@ -249,10 +263,11 @@ public class EmployeeServiceTest {
     @Test
     void filterByDepartmentAndAge_throwsResourceNotFoundException_whenDepartmentNotFound() {
         when(departmentRepository.existsById(1L)).thenReturn(false);
+        when(messageHandlerService.get(eq("department.not.found"), any())).thenReturn("Department with id: 1 not found");
 
         assertThatThrownBy(() -> employeeService.filterByDepartmentAndAge(1L, 20, 30, pageable))
                 .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("Department not found");
+                .hasMessage("Department with id: 1 not found");
 
         verify(employeeRepository, never()).findByDepartmentAndAgeBetween(any(), anyInt(), anyInt(), any(Pageable.class));
     }
@@ -260,10 +275,11 @@ public class EmployeeServiceTest {
     @Test
     void filterByDepartmentAndAge_throwsBadRequestException_whenMinAgeBelowMinimum() {
         when(departmentRepository.existsById(1L)).thenReturn(true);
+        when(messageHandlerService.get("employee.age.invalid")).thenReturn("Employee age must be between 18 and 80 years old.");
 
         assertThatThrownBy(() -> employeeService.filterByDepartmentAndAge(1L, 17, 30, pageable))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("Age must be between 18 and 80");
+                .hasMessage("Employee age must be between 18 and 80 years old.");
 
         verify(employeeRepository, never()).findByDepartmentAndAgeBetween(any(), anyInt(), anyInt(), any(Pageable.class));
     }
@@ -271,10 +287,11 @@ public class EmployeeServiceTest {
     @Test
     void filterByDepartmentAndAge_throwsBadRequestException_whenMaxAgeBelowMinimum() {
         when(departmentRepository.existsById(1L)).thenReturn(true);
+        when(messageHandlerService.get("employee.age.invalid")).thenReturn("Employee age must be between 18 and 80 years old.");
 
         assertThatThrownBy(() -> employeeService.filterByDepartmentAndAge(1L, 18, 17, pageable))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("Age must be between 18 and 80");
+                .hasMessage("Employee age must be between 18 and 80 years old.");
 
         verify(employeeRepository, never()).findByDepartmentAndAgeBetween(any(), anyInt(), anyInt(), any(Pageable.class));
     }
@@ -282,10 +299,11 @@ public class EmployeeServiceTest {
     @Test
     void filterByDepartmentAndAge_throwsBadRequestException_whenMinAgeAboveMaximum() {
         when(departmentRepository.existsById(1L)).thenReturn(true);
+        when(messageHandlerService.get("employee.age.invalid")).thenReturn("Employee age must be between 18 and 80 years old.");
 
         assertThatThrownBy(() -> employeeService.filterByDepartmentAndAge(1L, 81, 30, pageable))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("Age must be between 18 and 80");
+                .hasMessage("Employee age must be between 18 and 80 years old.");
 
         verify(employeeRepository, never()).findByDepartmentAndAgeBetween(any(), anyInt(), anyInt(), any(Pageable.class));
     }
@@ -293,10 +311,11 @@ public class EmployeeServiceTest {
     @Test
     void filterByDepartmentAndAge_throwsBadRequestException_whenMaxAgeAboveMaximum() {
         when(departmentRepository.existsById(1L)).thenReturn(true);
+        when(messageHandlerService.get("employee.age.invalid")).thenReturn("Employee age must be between 18 and 80 years old.");
 
         assertThatThrownBy(() -> employeeService.filterByDepartmentAndAge(1L, 20, 81, pageable))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("Age must be between 18 and 80");
+                .hasMessage("Employee age must be between 18 and 80 years old.");
 
         verify(employeeRepository, never()).findByDepartmentAndAgeBetween(any(), anyInt(), anyInt(), any(Pageable.class));
     }
@@ -304,10 +323,12 @@ public class EmployeeServiceTest {
     @Test
     void filterByDepartmentAndAge_throwsBadRequestException_whenMinAgeGreaterThanMaxAge() {
         when(departmentRepository.existsById(1L)).thenReturn(true);
+        when(messageHandlerService.get("employee.age.minimum.higher.than.maximum")).thenReturn("Minimum Age cannot be higher than Max Age");
+
 
         assertThatThrownBy(() -> employeeService.filterByDepartmentAndAge(1L, 40, 20, pageable))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("Minimum age cannot be greater than maximum age");
+                .hasMessage("Minimum Age cannot be higher than Max Age");
 
         verify(employeeRepository, never()).findByDepartmentAndAgeBetween(any(), anyInt(), anyInt(), any(Pageable.class));
     }
@@ -362,10 +383,11 @@ public class EmployeeServiceTest {
         request.setSalary(BigDecimal.valueOf(20000.00));
 
         when(departmentRepository.findById(1L)).thenReturn(Optional.empty());
+        when(messageHandlerService.get(eq("department.not.found"), any())).thenReturn("Department with id: 1 not found");
 
         assertThatThrownBy(() -> employeeService.addNewEmployee(request))
                 .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("Department not found");
+                .hasMessage("Department with id: 1 not found");
 
         verify(employeeRepository, never()).save(any(Employee.class));
     }
@@ -379,10 +401,11 @@ public class EmployeeServiceTest {
         request.setSalary(BigDecimal.valueOf(20000.00));
 
         when(departmentRepository.findById(1L)).thenReturn(Optional.of(department));
+        when(messageHandlerService.get("employee.age.invalid")).thenReturn("Employee age must be between 18 and 80 years old.");
 
         assertThatThrownBy(() -> employeeService.addNewEmployee(request))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("Employee age must be between 18 and 80 years old");
+                .hasMessage("Employee age must be between 18 and 80 years old.");
 
         verify(employeeRepository, never()).save(any(Employee.class));
     }
@@ -397,10 +420,11 @@ public class EmployeeServiceTest {
         request.setSalary(BigDecimal.valueOf(20000.00));
 
         when(departmentRepository.findById(1L)).thenReturn(Optional.of(department));
+        when(messageHandlerService.get("employee.age.invalid")).thenReturn("Employee age must be between 18 and 80 years old.");
 
         assertThatThrownBy(() -> employeeService.addNewEmployee(request))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("Employee age must be between 18 and 80 years old");
+                .hasMessage("Employee age must be between 18 and 80 years old.");
 
         verify(employeeRepository, never()).save(any(Employee.class));
     }
@@ -414,10 +438,11 @@ public class EmployeeServiceTest {
         request.setSalary(BigDecimal.valueOf(-1000.00)); // negative — invalid
 
         when(departmentRepository.findById(1L)).thenReturn(Optional.of(department));
+        when(messageHandlerService.get("employee.salary.negative")).thenReturn("Salary cannot be negative.");
 
         assertThatThrownBy(() -> employeeService.addNewEmployee(request))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("Salary cannot be negative");
+                .hasMessage("Salary cannot be negative.");
 
         verify(employeeRepository, never()).save(any(Employee.class));
     }
@@ -431,10 +456,11 @@ public class EmployeeServiceTest {
         request.setSalary(BigDecimal.valueOf(18000.00)); // below minimum wage — invalid
 
         when(departmentRepository.findById(1L)).thenReturn(Optional.of(department));
+        when(messageHandlerService.get("employee.salary.below.minimum")).thenReturn("Salary cannot be below the minimum wage of 19,000.00.");
 
         assertThatThrownBy(() -> employeeService.addNewEmployee(request))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("Salary cannot be below the minimum wage of ₱19,000.00");
+                .hasMessage("Salary cannot be below the minimum wage of 19,000.00.");
 
         verify(employeeRepository, never()).save(any(Employee.class));
     }
@@ -467,10 +493,11 @@ public class EmployeeServiceTest {
         request.setSalary(BigDecimal.valueOf(20000.00));
 
         when(employeeRepository.findById(1L)).thenReturn(Optional.empty());
+        when(messageHandlerService.get(eq("employee.not.found"), any())).thenReturn("Employee with id: 1 not found");
 
         assertThatThrownBy(() -> employeeService.updateEmployeeDetails(1L, request))
                 .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("Employee not found");
+                .hasMessage("Employee with id: 1 not found");
 
         verify(employeeRepository, never()).save(any(Employee.class));
     }
@@ -485,10 +512,11 @@ public class EmployeeServiceTest {
 
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(employee));
         when(departmentRepository.findById(1L)).thenReturn(Optional.empty());
+        when(messageHandlerService.get(eq("department.not.found"), any())).thenReturn("Department with id: 1 not found");
 
         assertThatThrownBy(() -> employeeService.updateEmployeeDetails(1L, request))
                 .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("Department not found");
+                .hasMessage("Department with id: 1 not found");
 
         verify(employeeRepository, never()).save(any(Employee.class));
     }
@@ -503,10 +531,11 @@ public class EmployeeServiceTest {
 
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(employee));
         when(departmentRepository.findById(1L)).thenReturn(Optional.of(department));
+        when(messageHandlerService.get("employee.age.invalid")).thenReturn("Employee age must be between 18 and 80 years old.");
 
         assertThatThrownBy(() -> employeeService.updateEmployeeDetails(1L, request))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("Employee age must be between 18 and 80 years old");
+                .hasMessage("Employee age must be between 18 and 80 years old.");
 
         verify(employeeRepository, never()).save(any(Employee.class));
     }
@@ -521,10 +550,11 @@ public class EmployeeServiceTest {
 
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(employee));
         when(departmentRepository.findById(1L)).thenReturn(Optional.of(department));
+        when(messageHandlerService.get("employee.age.invalid")).thenReturn("Employee age must be between 18 and 80 years old.");
 
         assertThatThrownBy(() -> employeeService.updateEmployeeDetails(1L, request))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("Employee age must be between 18 and 80 years old");
+                .hasMessage("Employee age must be between 18 and 80 years old.");
 
         verify(employeeRepository, never()).save(any(Employee.class));
     }
@@ -539,10 +569,11 @@ public class EmployeeServiceTest {
 
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(employee));
         when(departmentRepository.findById(1L)).thenReturn(Optional.of(department));
+        when(messageHandlerService.get("employee.salary.negative")).thenReturn("Salary cannot be negative.");
 
         assertThatThrownBy(() -> employeeService.updateEmployeeDetails(1L, request))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("Salary cannot be negative");
+                .hasMessage("Salary cannot be negative.");
 
         verify(employeeRepository, never()).save(any(Employee.class));
     }
@@ -557,10 +588,11 @@ public class EmployeeServiceTest {
 
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(employee));
         when(departmentRepository.findById(1L)).thenReturn(Optional.of(department));
+        when(messageHandlerService.get("employee.salary.below.minimum")).thenReturn("Salary cannot be below the minimum wage of 19,000.00.");
 
         assertThatThrownBy(() -> employeeService.updateEmployeeDetails(1L, request))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("Salary cannot be below the minimum wage of ₱19,000.00");
+                .hasMessage("Salary cannot be below the minimum wage of 19,000.00.");
 
         verify(employeeRepository, never()).save(any(Employee.class));
     }
@@ -578,10 +610,11 @@ public class EmployeeServiceTest {
         when(departmentRepository.findById(1L)).thenReturn(Optional.of(department));
         when(employeeRepository.existsByNameAndDateOfBirth(
                 "Maria Santos", LocalDate.of(1995, 5, 15))).thenReturn(true);
+        when(messageHandlerService.get("employee.already.exists")).thenReturn("Employee already exists.");
 
         assertThatThrownBy(() -> employeeService.updateEmployeeDetails(1L, request))
                 .isInstanceOf(DuplicateEntryException.class)
-                .hasMessage("An employee with the same name and date of birth already exists.");
+                .hasMessage("Employee already exists.");
 
         verify(employeeRepository, never()).save(any(Employee.class));
     }
@@ -590,20 +623,25 @@ public class EmployeeServiceTest {
     @Test
     void updateEmployeeDetails_doesNotThrowDuplicate_whenUpdatingSameEmployee() {
         EmployeeDtoRequest request = new EmployeeDtoRequest();
-        request.setName(employee.getName()); // same name
+        request.setName(employee.getName());
         request.setDepartmentId(1L);
-        request.setDateOfBirth(employee.getDateOfBirth()); // same dob
-        request.setSalary(BigDecimal.valueOf(25000.00)); // only salary changed
+        request.setDateOfBirth(employee.getDateOfBirth());
+        request.setSalary(BigDecimal.valueOf(25000.00));
 
         when(employeeRepository.findById(1L)).thenReturn(Optional.of(employee));
         when(departmentRepository.findById(1L)).thenReturn(Optional.of(department));
+
+        // mock with normalized name — trim and single spaces
         when(employeeRepository.existsByNameAndDateOfBirth(
-                employee.getName(), employee.getDateOfBirth())).thenReturn(true);
+                employee.getName().trim().replaceAll("\\s+", " "),
+                employee.getDateOfBirth())).thenReturn(true);
+        when(messageHandlerService.get("employee.updated.success"))
+                .thenReturn("Employee record has been successfully updated.");
         when(employeeRepository.save(any(Employee.class))).thenReturn(employee);
 
-        // should not throw
-        employeeService.updateEmployeeDetails(1L, request);
+        String result = employeeService.updateEmployeeDetails(1L, request);
 
+        assertThat(result).isEqualTo("Employee record has been successfully updated.");
         verify(employeeRepository, times(1)).save(any(Employee.class));
     }
 
@@ -612,20 +650,20 @@ public class EmployeeServiceTest {
     @Test
     void addNewEmployee_normalizesNameBeforeSaving() {
         EmployeeDtoRequest request = new EmployeeDtoRequest();
-        request.setName("  Juan  dela  Cruz  "); // extra spaces
+        request.setName("Employee   1"); // extra spaces
         request.setDepartmentId(1L);
         request.setDateOfBirth(LocalDate.of(2000, 1, 1));
         request.setSalary(BigDecimal.valueOf(20000.00));
 
         when(departmentRepository.findById(1L)).thenReturn(Optional.of(department));
-        when(employeeRepository.existsByNameAndDateOfBirth("Juan dela Cruz", LocalDate.of(2000, 1, 1))).thenReturn(false);
+        when(employeeRepository.existsByNameAndDateOfBirth("Employee 1", LocalDate.of(2000, 1, 1))).thenReturn(false);
         when(employeeRepository.save(any(Employee.class))).thenReturn(employee);
 
         employeeService.addNewEmployee(request);
 
         // verify saved employee has normalized name
         verify(employeeRepository, times(2)).save(argThat(emp ->
-                emp.getName().equals("Juan dela Cruz")));
+                emp.getName().equals("Employee 1")));
     }
 
     @Test
@@ -641,10 +679,11 @@ public class EmployeeServiceTest {
     @Test
     void deleteEmployee_throwsResourceNotFoundException_whenEmployeeNotFound() {
         when(employeeRepository.existsById(1L)).thenReturn(false);
+        when(messageHandlerService.get(eq("employee.not.found"), any())).thenReturn("Employee with id: 1 not found");
 
         assertThatThrownBy(() -> employeeService.deleteEmployee(1L))
                 .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessage("Employee not found with id: 1");
+                .hasMessage("Employee with id: 1 not found");
 
         verify(employeeRepository, never()).deleteById(any());
     }
