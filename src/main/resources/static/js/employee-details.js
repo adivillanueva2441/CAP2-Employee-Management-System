@@ -1,5 +1,3 @@
-const EMPLOYEE_API = '/api/employees';
-
 // get the employee id from the URL
 const urlParams = new URLSearchParams(window.location.search);
 const employeeId = urlParams.get('id');
@@ -8,7 +6,7 @@ const employeeId = urlParams.get('id');
 document.addEventListener('DOMContentLoaded', () => {
     // if no id in URL redirect back to list
     if (!employeeId) {
-        window.location.href = '/employees.html';
+        window.location.href = PAGE_EMPLOYEES;
         return;
     }
     loadEmployee(employeeId);
@@ -21,7 +19,7 @@ async function loadEmployee(id) {
 
     if (!res.ok) {
         alert('Employee not found.');
-        window.location.href = '/employees.html';
+        window.location.href = PAGE_EMPLOYEES;
         return;
     }
 
@@ -37,7 +35,7 @@ async function loadEmployee(id) {
         '₱' + parseFloat(employee.salary).toLocaleString('en-PH', { minimumFractionDigits: 2 });
 
     // set the edit button href
-    document.getElementById('editBtn').href = `/employee-form.html?id=${employee.employeeId}`;
+    document.getElementById('editBtn').href = `${PAGE_EMPLOYEE_FORM}?id=${employee.employeeId}`;
 
     // wire up the delete button
     document.getElementById('deleteBtn').addEventListener('click', () => {
@@ -56,10 +54,19 @@ async function deleteEmployee(id) {
 
     if (res.ok) {
         // redirect back to employee list after delete
-        sessionStorage.setItem('successMessage', 'Employee deleted successfully.');
-        window.location.href = '/employees.html';
+        const message = await res.text();
+        sessionStorage.setItem('successMessage', message);
+        window.location.href = PAGE_EMPLOYEES;
     } else {
         const err = await res.json();
         alert(err.message || 'Failed to delete employee.');
     }
+}
+
+function showAlert(message, type = 'success') {
+    const box = document.getElementById('alertBox');
+    box.className = `alert alert-${type} alert-dismissible fade show`;
+    document.getElementById('alertMessage').textContent = message;
+    box.classList.remove('d-none');
+    setTimeout(() => box.classList.add('d-none'), 4000);
 }

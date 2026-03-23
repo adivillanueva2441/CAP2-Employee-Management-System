@@ -4,6 +4,7 @@ import com.example.employee.management.system.dto.request.DepartmentDtoRequest;
 import com.example.employee.management.system.dto.response.DepartmentDtoResponse;
 import com.example.employee.management.system.model.Department;
 import com.example.employee.management.system.service.IDepartmentService;
+import com.example.employee.management.system.service.IMessageHandlerService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -21,6 +22,8 @@ public class DepartmentApiController {
 
     @Autowired
     private IDepartmentService departmentService;
+    @Autowired
+    private IMessageHandlerService messageHandlerService;
 
     @GetMapping
     public ResponseEntity<Page<DepartmentDtoResponse>>  getAllDepartments(Pageable pageable) {
@@ -38,23 +41,24 @@ public class DepartmentApiController {
     public ResponseEntity<DepartmentDtoResponse> addNewDepartment(
             @Valid @RequestBody DepartmentDtoRequest departmentDtoRequest) {
 
-        return ResponseEntity.status(HttpStatus.CREATED)
+        String message = messageHandlerService.get("department.created.success");
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .header("X-Success-message", message)
                 .body(departmentService.addNewDepartment(departmentDtoRequest));
     }
 
     @PutMapping ("/{departmentId}")
-    public ResponseEntity<Void> updateDepartment(
+    public ResponseEntity<String> updateDepartment(
             @PathVariable Long departmentId,
             @Valid @RequestBody DepartmentDtoRequest departmentDtoRequest) {
 
-        departmentService.updateDepartmentDetails(departmentId, departmentDtoRequest);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(departmentService.updateDepartmentDetails(departmentId, departmentDtoRequest));
     }
 
     @DeleteMapping("/{departmentId}")
-    public ResponseEntity<Void> deleteDepartment(@PathVariable Long departmentId) {
-        departmentService.deleteDepartment(departmentId);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<String> deleteDepartment(@PathVariable Long departmentId) {
+        return ResponseEntity.ok(departmentService.deleteDepartment(departmentId));
     }
 
 

@@ -1,5 +1,3 @@
-const DEPARTMENT_API = '/api/departments';
-
 // Check if there is an id in the URL to know if the form is for adding department or editing existing
 const urlParams = new URLSearchParams(window.location.search);
 const departmentId = urlParams.get('id');
@@ -65,8 +63,19 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
         return;
     }
 
+        //read success message from message.properties
+        let message;
+        if (isEditing) {
+            // PUT returns message in response body
+            message = await res.text();
+        } else {
+            // POST returns message in X-Success-Message header
+            message = res.headers.get('X-Success-Message');
+        }
+
     // success — redirect back to department list
-    window.location.href = '/departments.html';
+    sessionStorage.setItem('successMessage', message);
+    window.location.href = PAGE_DEPARTMENTS;
 });
 
 function showError(message) {

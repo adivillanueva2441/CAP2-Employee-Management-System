@@ -11,6 +11,6 @@ public interface IDepartmentService {
     Page<DepartmentDtoResponse> getAllDepartments(Pageable pageable);
     DepartmentDtoResponse getDepartmentById(Long departmentId);
     DepartmentDtoResponse addNewDepartment(DepartmentDtoRequest departmentDtoRequest);
-    void updateDepartmentDetails(Long departmentId, DepartmentDtoRequest departmentDtoRequest);
-    void deleteDepartment(Long departmentId);
+    String updateDepartmentDetails(Long departmentId, DepartmentDtoRequest departmentDtoRequest);
+    String deleteDepartment(Long departmentId);
 }

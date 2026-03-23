@@ -1,6 +1,3 @@
-const DEPARTMENT_API = '/api/departments';
-const PAGE_SIZE = 5;
-
 let currentPage = 0;
 
 // Checks if page has loaded
@@ -16,6 +13,13 @@ async function loadDepartments(page = 0) {
         credentials: 'include'
     });
  
+    const message = sessionStorage.getItem('successMessage');
+    if (message) {
+        showAlert(message, 'success');
+        sessionStorage.removeItem('successMessage'); // clear after showing
+
+    }
+    
     const data = await res.json();
  
     renderTable(data);
@@ -108,14 +112,14 @@ async function deleteDepartment(departmentId) {
         credentials: 'include'
     });
 
-    if (!res.ok) {
-        const err = await res.json(); // read the error response
-        showAlert(err.message || 'Failed to delete department.', 'danger'); // use API message
-        return;
+    if (res.ok) {
+        const message = await res.text();
+        await loadDepartments(currentPage); // Reload current page after delete
+        showAlert(message, 'success');
+    } else {
+        const err = await res.json();
+        showAlert(err.message || 'Failed to delete department.', 'danger');
     }
-
-    await loadDepartments(currentPage);
-    showAlert('Department deleted successfully.', 'success');
 }
 
 function showAlert(message, type = 'success') {

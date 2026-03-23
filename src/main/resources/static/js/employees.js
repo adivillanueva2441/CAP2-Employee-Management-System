@@ -1,7 +1,3 @@
-const EMPLOYEE_API = '/api/employees';
-const DEPARTMENT_API = '/api/departments';
-const PAGE_SIZE = 10;
-
 let currentPage = 0;
 let currentFilter = {};
 
@@ -43,15 +39,12 @@ async function loadEmployees(page = 0, filter = {}) {
     let url = `${EMPLOYEE_API}?page=${page}&size=${PAGE_SIZE}&sort=${currentSort.field},${currentSort.direction}`;
 
     if(filter.departmentId && filter.minAge && filter.maxAge){
-        url = `${EMPLOYEE_API}/filter?departmentId=${filter.departmentId}&minAge=${filter.minAge}&maxAge=${filter.maxAge}&page=${page}&size=${PAGE_SIZE}
-        &sort=${currentSort.field},${currentSort.direction}`
+        url = `${EMPLOYEE_API}/filter?departmentId=${filter.departmentId}&minAge=${filter.minAge}&maxAge=${filter.maxAge}&page=${page}&size=${PAGE_SIZE}&sort=${currentSort.field},${currentSort.direction}`
 
     }else if(filter.departmentId){
-        url = `${EMPLOYEE_API}/filter?departmentId=${filter.departmentId}&page=${page}&size=${PAGE_SIZE}
-        &sort=${currentSort.field},${currentSort.direction}`
+        url = `${EMPLOYEE_API}/filter?departmentId=${filter.departmentId}&page=${page}&size=${PAGE_SIZE}&sort=${currentSort.field},${currentSort.direction}`
     }else if(filter.minAge && filter.maxAge){
-        url = `${EMPLOYEE_API}/filter?&minAge=${filter.minAge}&maxAge=${filter.maxAge}&page=${page}&size=${PAGE_SIZE}
-        &sort=${currentSort.field},${currentSort.direction}`
+        url = `${EMPLOYEE_API}/filter?minAge=${filter.minAge}&maxAge=${filter.maxAge}&page=${page}&size=${PAGE_SIZE}&sort=${currentSort.field},${currentSort.direction}`
     }
 
     const res = await fetch(
@@ -130,10 +123,10 @@ function renderTable(data) {
             <td>${employee.age}</td>
             <td>₱${parseFloat(employee.salary).toLocaleString()}</td>
             <td>
-                <a href="/employee-details.html?id=${employee.employeeId}" class="btn btn-outline-success btn-sm me-1">
+                <a href="${PAGE_EMPLOYEE_DETAILS}?id=${employee.employeeId}" class="btn btn-outline-success btn-sm me-1">
                     <i class="bi bi-eye"></i>
                 </a>
-                <a href="/employee-form.html?id=${employee.employeeId}" class="btn btn-outline-primary btn-sm me-1">
+                <a href="${PAGE_EMPLOYEE_FORM}?id=${employee.employeeId}" class="btn btn-outline-primary btn-sm me-1">
                     <i class="bi bi-pencil"></i>
                 </a>
                 <button class="btn btn-outline-danger btn-sm" onclick="deleteEmployee(${employee.employeeId})">
@@ -221,14 +214,14 @@ document.getElementById("applyFilterBtn").addEventListener('click', () =>{
 
     // minAge cannot be greater than max
     if (minAge && maxAge && parseInt(minAge) > parseInt(maxAge)) {
-        errorDiv.textContent = 'Minimum age cannot be greater than maximum age.';
+        errorDiv.textContent = 'Minimum Age cannot be higher than Max Age.';
         errorDiv.classList.remove('d-none');
         return;
     }
 
     // minAge and maxAge must be between 18 and 80
     if (minAge && maxAge && (parseInt(minAge) < 18 || parseInt(maxAge) < 18 || parseInt(minAge) > 80 || parseInt(maxAge) > 80)){
-        errorDiv.textContent = 'Minimum and Max Age must be between 18 and 80.';
+        errorDiv.textContent = 'Employee age must be between 18 and 80 years old.';
         errorDiv.classList.remove('d-none');
         return;
     }
@@ -254,10 +247,10 @@ document.getElementById('clearFilterBtn').addEventListener('click', () => {
 
 // Fetches average salary and age from the report API
 async function loadStats() {
-    const salaryRes = await fetch('/api/reports/average-salary', { credentials: 'include' });
-    const ageRes = await fetch('/api/reports/average-age', { credentials: 'include' });
-    const totalEmpRes = await fetch('/api/reports/total-employees', { credentials: 'include' });
-    const totalDeptRes = await fetch('/api/reports/total-departments', { credentials: 'include' });
+    const salaryRes = await fetch(`${REPORT_API}/average-salary`, { credentials: 'include' });
+    const ageRes = await fetch(`${REPORT_API}/average-age`, { credentials: 'include' });
+    const totalEmpRes = await fetch(`${REPORT_API}/total-employees`, { credentials: 'include' });
+    const totalDeptRes = await fetch(`${REPORT_API}/total-departments`, { credentials: 'include' });
 
     const avgSalary = await salaryRes.json();
     const avgAge = await ageRes.json();
@@ -282,11 +275,13 @@ async function deleteEmployee(id) {
     });
 
     if (res.ok) {
-        loadEmployees(currentPage); // Reload current page after delete
-        showAlert('Employee deleted successfully.', 'success'); 
+        const message = await res.text();
+        await loadEmployees(currentPage, currentFilter); // Reload current page after delete
+        showAlert(message, 'success');
         loadStats();
     } else {
-        alert('Failed to delete employee.');
+        const err = await res.json();
+        showAlert(err.message || 'Failed to delete employee.', 'danger');
     }
 }
 

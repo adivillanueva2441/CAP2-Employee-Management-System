@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Repository
 public interface EmployeeRepository extends JpaRepository<Employee, Long> {
@@ -40,4 +41,6 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
     //Search for employees based on name
     Page<Employee> findByNameContainingIgnoreCase(String name, Pageable pageable);
+
+    boolean existsByNameAndDateOfBirth(String name, LocalDate dateOfBirth);
 }

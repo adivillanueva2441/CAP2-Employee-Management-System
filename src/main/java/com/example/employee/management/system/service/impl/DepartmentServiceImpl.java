@@ -8,9 +8,9 @@ import com.example.employee.management.system.exceptions.ResourceNotFoundExcepti
 import com.example.employee.management.system.model.Department;
 import com.example.employee.management.system.repository.DepartmentRepository;
 import com.example.employee.management.system.service.IDepartmentService;
+import com.example.employee.management.system.service.IMessageHandlerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +20,9 @@ public class DepartmentServiceImpl implements IDepartmentService {
 
     @Autowired
     private DepartmentRepository departmentRepository;
+
+    @Autowired
+    private IMessageHandlerService messageHandlerService;
 
     @Transactional
     @Override
@@ -33,7 +36,7 @@ public class DepartmentServiceImpl implements IDepartmentService {
     public DepartmentDtoResponse getDepartmentById(Long departmentId) {
 
         Department department = departmentRepository.findById(departmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Department with id: " + departmentId + " not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(messageHandlerService.get("department.not.found", departmentId)));
         return new DepartmentDtoResponse(department);
     }
 
@@ -42,7 +45,7 @@ public class DepartmentServiceImpl implements IDepartmentService {
     public DepartmentDtoResponse addNewDepartment(DepartmentDtoRequest departmentDtoRequest) {
 
         if (departmentRepository.existsByDepartmentName(departmentDtoRequest.getDepartmentName())) {
-            throw new DuplicateEntryException("Department already exists");
+            throw new DuplicateEntryException(messageHandlerService.get("department.already.exists", departmentDtoRequest.getDepartmentName()));
         }
 
         return createNewDepartment(departmentDtoRequest);
@@ -50,30 +53,33 @@ public class DepartmentServiceImpl implements IDepartmentService {
 
     @Transactional
     @Override
-    public void updateDepartmentDetails(Long departmentId, DepartmentDtoRequest departmentDtoRequest){
+    public String updateDepartmentDetails(Long departmentId, DepartmentDtoRequest departmentDtoRequest){
 
         Department department = departmentRepository.findById(departmentId)
-                .orElseThrow(()->new ResourceNotFoundException("Department with id: " + departmentId + " not found"));
+                .orElseThrow(()->new ResourceNotFoundException(messageHandlerService.get("department.not.found", departmentId)));
         if (departmentRepository.existsByDepartmentName(departmentDtoRequest.getDepartmentName())) {
-            throw new DuplicateEntryException("Department already exists");
+            throw new DuplicateEntryException(messageHandlerService.get("department.already.exists", departmentDtoRequest.getDepartmentName()));
         }
 
         department.setDepartmentName(departmentDtoRequest.getDepartmentName());
         departmentRepository.save(department);
 
+        return messageHandlerService.get("department.updated.success", departmentId);
+
     }
 
     @Transactional
     @Override
-    public void deleteDepartment(Long departmentId){
+    public String deleteDepartment(Long departmentId){
         Department department = departmentRepository.findById(departmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Department with id: " + departmentId + " not found"));
+                .orElseThrow(() -> new ResourceNotFoundException(messageHandlerService.get("department.not.found", departmentId)));
 
         // check if department has employees before deleting
         if (!department.getEmployees().isEmpty()) {
-            throw new BadRequestException("Cannot delete department with existing employees.");
+            throw new BadRequestException(messageHandlerService.get("department.has.employees", departmentId));
         }
         departmentRepository.deleteById(departmentId);
+        return messageHandlerService.get("department.deleted.success", departmentId);
     }
 
     private DepartmentDtoResponse createNewDepartment(DepartmentDtoRequest departmentDtoRequest) {

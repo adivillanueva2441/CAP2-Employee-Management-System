@@ -1,6 +1,3 @@
-const EMPLOYEE_API = '/api/employees';
-const DEPARTMENT_API = '/api/departments';
-
 // Check if there is an id in the URL to know if the form is for adding employee or editing existing employee
 const urlParams = new URLSearchParams(window.location.search);
 const employeeId = urlParams.get('id');
@@ -103,10 +100,17 @@ document.getElementById('saveBtn').addEventListener('click', async () => {
         return;
     }
 
-    // success — redirect back to employee list
-        // store message before redirecting
-    sessionStorage.setItem('successMessage', isEditing ? 'Employee updated successfully.' : 'Employee added successfully.');
-    window.location.href = '/employees.html';
+    //read success message from message.properties
+    let message;
+    if (isEditing) {
+        // PUT returns message in response body
+        message = await res.text();
+    } else {
+        // POST returns message in X-Success-Message header
+        message = res.headers.get('X-Success-Message');
+    }
+    sessionStorage.setItem('successMessage', message);
+    window.location.href = PAGE_EMPLOYEES;
 });
 
 function showError(message) {

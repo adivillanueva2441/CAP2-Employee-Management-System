@@ -9,6 +9,7 @@ import com.example.employee.management.system.model.Department;
 import com.example.employee.management.system.model.Employee;
 import com.example.employee.management.system.repository.DepartmentRepository;
 import com.example.employee.management.system.service.impl.DepartmentServiceImpl;
+import com.example.employee.management.system.service.impl.MessageHandlerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +34,9 @@ public class DepartmentServiceTest {
 
     @Mock
     private DepartmentRepository departmentRepository;
+
+    @Mock
+    private MessageHandlerService messageHandlerService;
 
     @InjectMocks
     private DepartmentServiceImpl departmentService;
@@ -90,6 +94,8 @@ public class DepartmentServiceTest {
     @Test
     void getDepartmentById_throwsResourceNotFoundException_whenDepartmentNotFound() {
         when(departmentRepository.findById(1L)).thenReturn(Optional.empty());
+        when(messageHandlerService.get(eq("department.not.found"), any()))
+                .thenReturn("Department with id: 1 not found");
 
         assertThatThrownBy(() -> departmentService.getDepartmentById(1L))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -120,10 +126,12 @@ public class DepartmentServiceTest {
         request.setDepartmentName("Engineering");
 
         when(departmentRepository.existsByDepartmentName("Engineering")).thenReturn(true);
+        when(messageHandlerService.get(eq("department.already.exists"), any()))
+                .thenReturn("A department with the same name already exists.");
 
         assertThatThrownBy(() -> departmentService.addNewDepartment(request))
                 .isInstanceOf(DuplicateEntryException.class)
-                .hasMessage("Department already exists");
+                .hasMessage("A department with the same name already exists.");
 
         verify(departmentRepository, never()).save(any(Department.class));
     }
@@ -151,6 +159,8 @@ public class DepartmentServiceTest {
         request.setDepartmentName("HR");
 
         when(departmentRepository.findById(1L)).thenReturn(Optional.empty());
+        when(messageHandlerService.get(eq("department.not.found"), any()))
+                .thenReturn("Department with id: 1 not found");
 
         assertThatThrownBy(() -> departmentService.updateDepartmentDetails(1L, request))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -166,10 +176,12 @@ public class DepartmentServiceTest {
 
         when(departmentRepository.findById(1L)).thenReturn(Optional.of(department));
         when(departmentRepository.existsByDepartmentName("Engineering")).thenReturn(true);
+        when(messageHandlerService.get(eq("department.already.exists"), any()))
+                .thenReturn("A department with the same name already exists.");
 
         assertThatThrownBy(() -> departmentService.updateDepartmentDetails(1L, request))
                 .isInstanceOf(DuplicateEntryException.class)
-                .hasMessage("Department already exists");
+                .hasMessage("A department with the same name already exists.");
 
         verify(departmentRepository, never()).save(any(Department.class));
     }
@@ -188,6 +200,8 @@ public class DepartmentServiceTest {
     @Test
     void deleteDepartment_throwsResourceNotFoundException_whenDepartmentNotFound() {
         when(departmentRepository.findById(1L)).thenReturn(Optional.empty());
+        when(messageHandlerService.get(eq("department.not.found"), any()))
+                .thenReturn("Department with id: 1 not found");
 
         assertThatThrownBy(() -> departmentService.deleteDepartment(1L))
                 .isInstanceOf(ResourceNotFoundException.class)
@@ -199,16 +213,17 @@ public class DepartmentServiceTest {
     @Test
     void deleteDepartment_throwsBadRequestException_whenDepartmentHasEmployees() {
         Employee employee = new Employee();
-        department.setEmployees(List.of(employee)); // department has employees
+        department.setEmployees(List.of(employee));
 
         when(departmentRepository.findById(1L)).thenReturn(Optional.of(department));
+        when(messageHandlerService.get(eq("department.has.employees"), any()))
+                .thenReturn("Unable to delete department with existing employees assigned to it.");
 
         assertThatThrownBy(() -> departmentService.deleteDepartment(1L))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessage("Cannot delete department with existing employees.");
+                .hasMessage("Unable to delete department with existing employees assigned to it.");
 
         verify(departmentRepository, never()).deleteById(any());
     }
-
 
 }

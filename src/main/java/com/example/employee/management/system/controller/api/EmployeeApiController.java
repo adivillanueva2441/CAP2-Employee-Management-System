@@ -4,6 +4,7 @@ import com.example.employee.management.system.dto.request.EmployeeDtoRequest;
 import com.example.employee.management.system.dto.response.EmployeeDtoResponse;
 import com.example.employee.management.system.exceptions.BadRequestException;
 import com.example.employee.management.system.service.IEmployeeService;
+import com.example.employee.management.system.service.IMessageHandlerService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -18,6 +19,9 @@ public class EmployeeApiController {
 
     @Autowired
     private IEmployeeService employeeService;
+
+    @Autowired
+    private IMessageHandlerService  messageHandlerService;
 
     @GetMapping
     public ResponseEntity<Page<EmployeeDtoResponse>> getAllEmployees(Pageable pageable) {
@@ -42,9 +46,6 @@ public class EmployeeApiController {
             @RequestParam(required = false) Integer minAge,
             @RequestParam(required = false) Integer maxAge,
             Pageable pageable){
-        if ((minAge != null && maxAge == null) || (minAge == null && maxAge != null)) {
-            throw new BadRequestException("Both minAge and maxAge must be provided together");
-        }
         if (departmentId != null && minAge != null && maxAge != null) {
             return ResponseEntity.ok(employeeService.filterByDepartmentAndAge(departmentId, minAge, maxAge
                                                                                 ,pageable));
@@ -60,19 +61,21 @@ public class EmployeeApiController {
 
     @PostMapping
     public ResponseEntity<EmployeeDtoResponse> addNewEmployee(@Valid @RequestBody EmployeeDtoRequest employeeDtoRequest){
-        return ResponseEntity.status(HttpStatus.CREATED).body(employeeService.addNewEmployee(employeeDtoRequest));
+        String message = messageHandlerService.get("employee.created.success");
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .header("X-Success-Message", message)
+                .body(employeeService.addNewEmployee(employeeDtoRequest));
     }
 
     @PutMapping("/{employeeId}")
-    public ResponseEntity<Void> updateEmployee(@PathVariable Long employeeId, @Valid @RequestBody EmployeeDtoRequest employeeDtoRequest){
-        employeeService.updateEmployeeDetails(employeeId, employeeDtoRequest);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<String> updateEmployee(@PathVariable Long employeeId, @Valid @RequestBody EmployeeDtoRequest employeeDtoRequest){
+        return ResponseEntity.ok(employeeService.updateEmployeeDetails(employeeId, employeeDtoRequest));
     }
 
     @DeleteMapping("/{employeeId}")
-    public ResponseEntity<Void> deleteEmployee(@PathVariable Long employeeId){
-        employeeService.deleteEmployee(employeeId);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<String> deleteEmployee(@PathVariable Long employeeId){
+        return ResponseEntity.ok(employeeService.deleteEmployee(employeeId));
     }
 
 

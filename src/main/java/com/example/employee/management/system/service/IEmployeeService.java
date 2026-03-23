@@ -8,13 +8,13 @@ import org.springframework.data.domain.Pageable;
 public interface IEmployeeService {
     Page<EmployeeDtoResponse> getAllEmployees(Pageable pageable);
     EmployeeDtoResponse getEmployeeById(Long employeeId);
-    Page<EmployeeDtoResponse> filterByAgeRange(int minAge, int maxAge, Pageable pageable);
+    Page<EmployeeDtoResponse> filterByAgeRange(Integer minAge, Integer maxAge, Pageable pageable);
     Page<EmployeeDtoResponse> filterByDepartmentId(Long departmentId, Pageable pageable);
-    Page<EmployeeDtoResponse> filterByDepartmentAndAge (Long departmentId, int minAge, int maxAge,
+    Page<EmployeeDtoResponse> filterByDepartmentAndAge (Long departmentId, Integer minAge, Integer maxAge,
                                                         Pageable pageable);
     EmployeeDtoResponse addNewEmployee(EmployeeDtoRequest employeeDtoRequest);
-    void updateEmployeeDetails(Long employeeId, EmployeeDtoRequest employeeDtoRequest);
-    void deleteEmployee(Long employeeId);
+    String updateEmployeeDetails(Long employeeId, EmployeeDtoRequest employeeDtoRequest);
+    String deleteEmployee(Long employeeId);
     Page<EmployeeDtoResponse> searchEmployeeName(String employeeName, Pageable pageable);
 
 }

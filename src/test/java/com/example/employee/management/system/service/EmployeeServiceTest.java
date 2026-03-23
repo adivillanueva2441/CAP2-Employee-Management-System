@@ -3,6 +3,7 @@ package com.example.employee.management.system.service;
 import com.example.employee.management.system.dto.request.EmployeeDtoRequest;
 import com.example.employee.management.system.dto.response.EmployeeDtoResponse;
 import com.example.employee.management.system.exceptions.BadRequestException;
+import com.example.employee.management.system.exceptions.DuplicateEntryException;
 import com.example.employee.management.system.exceptions.ResourceNotFoundException;
 import com.example.employee.management.system.model.Department;
 import com.example.employee.management.system.model.Employee;
@@ -562,6 +563,69 @@ public class EmployeeServiceTest {
                 .hasMessage("Salary cannot be below the minimum wage of ₱19,000.00");
 
         verify(employeeRepository, never()).save(any(Employee.class));
+    }
+
+    // updating to a name that belongs to another employee
+    @Test
+    void updateEmployeeDetails_throwsDuplicateEntryException_whenNameBelongsToAnotherEmployee() {
+        EmployeeDtoRequest request = new EmployeeDtoRequest();
+        request.setName("Maria Santos"); // different name — belongs to another employee
+        request.setDepartmentId(1L);
+        request.setDateOfBirth(LocalDate.of(1995, 5, 15));
+        request.setSalary(BigDecimal.valueOf(20000.00));
+
+        when(employeeRepository.findById(1L)).thenReturn(Optional.of(employee));
+        when(departmentRepository.findById(1L)).thenReturn(Optional.of(department));
+        when(employeeRepository.existsByNameAndDateOfBirth(
+                "Maria Santos", LocalDate.of(1995, 5, 15))).thenReturn(true);
+
+        assertThatThrownBy(() -> employeeService.updateEmployeeDetails(1L, request))
+                .isInstanceOf(DuplicateEntryException.class)
+                .hasMessage("An employee with the same name and date of birth already exists.");
+
+        verify(employeeRepository, never()).save(any(Employee.class));
+    }
+
+    // updating other fields without changing name and dob — should not throw
+    @Test
+    void updateEmployeeDetails_doesNotThrowDuplicate_whenUpdatingSameEmployee() {
+        EmployeeDtoRequest request = new EmployeeDtoRequest();
+        request.setName(employee.getName()); // same name
+        request.setDepartmentId(1L);
+        request.setDateOfBirth(employee.getDateOfBirth()); // same dob
+        request.setSalary(BigDecimal.valueOf(25000.00)); // only salary changed
+
+        when(employeeRepository.findById(1L)).thenReturn(Optional.of(employee));
+        when(departmentRepository.findById(1L)).thenReturn(Optional.of(department));
+        when(employeeRepository.existsByNameAndDateOfBirth(
+                employee.getName(), employee.getDateOfBirth())).thenReturn(true);
+        when(employeeRepository.save(any(Employee.class))).thenReturn(employee);
+
+        // should not throw
+        employeeService.updateEmployeeDetails(1L, request);
+
+        verify(employeeRepository, times(1)).save(any(Employee.class));
+    }
+
+
+    // test that extra spaces are removed
+    @Test
+    void addNewEmployee_normalizesNameBeforeSaving() {
+        EmployeeDtoRequest request = new EmployeeDtoRequest();
+        request.setName("  Juan  dela  Cruz  "); // extra spaces
+        request.setDepartmentId(1L);
+        request.setDateOfBirth(LocalDate.of(2000, 1, 1));
+        request.setSalary(BigDecimal.valueOf(20000.00));
+
+        when(departmentRepository.findById(1L)).thenReturn(Optional.of(department));
+        when(employeeRepository.existsByNameAndDateOfBirth("Juan dela Cruz", LocalDate.of(2000, 1, 1))).thenReturn(false);
+        when(employeeRepository.save(any(Employee.class))).thenReturn(employee);
+
+        employeeService.addNewEmployee(request);
+
+        // verify saved employee has normalized name
+        verify(employeeRepository, times(2)).save(argThat(emp ->
+                emp.getName().equals("Juan dela Cruz")));
     }
 
     @Test
